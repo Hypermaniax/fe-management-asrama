@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Ilustrasi kebersamaan penghuni">
+  <rect width="800" height="600" fill="#FFF0C5"/>
+  <rect x="20" y="20" width="760" height="560" fill="none" stroke="#1E3A3A" stroke-width="12"/>
+  <g stroke="#1E3A3A" stroke-width="10">
+    <g>
+      <circle cx="180" cy="230" r="70" fill="#2A7D7E"/>
+      <path d="M110 430v-90a70 70 0 0 1 140 0v90z" fill="#2A7D7E"/>
+    </g>
+    <g>
+      <circle cx="400" cy="200" r="80" fill="#FF8C52"/>
+      <path d="M320 440v-100a80 80 0 0 1 160 0v100z" fill="#FF8C52"/>
+    </g>
+    <g>
+      <circle cx="620" cy="230" r="70" fill="#8AD6D1"/>
+      <path d="M550 430v-90a70 70 0 0 1 140 0v90z" fill="#8AD6D1"/>
+    </g>
+  </g>
+  <path d="M80 470h640" stroke="#1E3A3A" stroke-width="12"/>
+</svg>

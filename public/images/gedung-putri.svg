@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Ilustrasi Gedung Putri">
+  <rect width="800" height="600" fill="#FFF0C5"/>
+  <rect x="20" y="20" width="760" height="560" fill="none" stroke="#1E3A3A" stroke-width="12"/>
+  <path d="M40 520h720" stroke="#1E3A3A" stroke-width="12"/>
+  <rect x="110" y="250" width="250" height="270" fill="#8AD6D1" stroke="#1E3A3A" stroke-width="10"/>
+  <path d="M90 250l145-110 145 110z" fill="#FF8C52" stroke="#1E3A3A" stroke-width="10" stroke-linejoin="round"/>
+  <rect x="400" y="190" width="240" height="330" fill="#2A7D7E" stroke="#1E3A3A" stroke-width="10"/>
+  <path d="M380 190l140-96 140 96z" fill="#8AD6D1" stroke="#1E3A3A" stroke-width="10" stroke-linejoin="round"/>
+  <g fill="#FFF0C5" stroke="#1E3A3A" stroke-width="8">
+    <rect x="150" y="300" width="60" height="60"/>
+    <rect x="250" y="300" width="60" height="60"/>
+    <rect x="150" y="400" width="60" height="60"/>
+    <rect x="250" y="400" width="60" height="60"/>
+  </g>
+  <g fill="#FFF0C5" stroke="#1E3A3A" stroke-width="8">
+    <rect x="440" y="240" width="70" height="70"/>
+    <rect x="540" y="240" width="70" height="70"/>
+    <rect x="440" y="360" width="70" height="70"/>
+    <rect x="540" y="360" width="70" height="70"/>
+  </g>
+  <rect x="470" y="450" width="100" height="70" fill="#FF8C52" stroke="#1E3A3A" stroke-width="8"/>
+</svg>
