@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Lock, Pencil, Plus, Trash2 } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { Can } from '@/components/shared/can'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
@@ -12,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import type { Role } from '@/features/rbac/api'
 import { RoleFormDialog } from '@/features/rbac/components/role-form-dialog'
 import { useDeleteRole, useRoles } from '@/features/rbac/hooks'
-import { ApiRequestError } from '@/lib/api'
+import { notifyError, notifySuccess } from '@/lib/notify'
 
 export default function RolesPage() {
   const { data, isLoading, error, refetch } = useRoles()
@@ -35,16 +34,11 @@ export default function RolesPage() {
   const confirmDelete = () => {
     if (!target) return
     remove.mutate(target.id, {
-      onSuccess: () => {
-        toast.success('Role dinonaktifkan', { description: target.name })
+      onSuccess: (res) => {
+        notifySuccess(res?.status ?? 'Role dinonaktifkan', target.name)
         setTarget(null)
       },
-      onError: (err) => {
-        toast.error('Gagal menonaktifkan', {
-          description:
-            err instanceof ApiRequestError ? err.message : 'Terjadi kesalahan',
-        })
-      },
+      onError: (error) => notifyError('Gagal menonaktifkan', error),
     })
   }
 

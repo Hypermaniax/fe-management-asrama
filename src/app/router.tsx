@@ -11,6 +11,11 @@ import LoginPage from '@/features/auth/pages/login'
 import RegisterPage from '@/features/auth/pages/register'
 import VerifyOtpPage from '@/features/auth/pages/verify-otp'
 import BuildingsPage from '@/features/building/pages/buildings'
+import CategoriesPage from '@/features/category/pages/categories'
+import FeeRulesPage from '@/features/fee-rule/pages/fee-rules'
+import RoomFacilitiesPage from '@/features/facility/pages/room-facilities'
+import PublicFacilitiesPage from '@/features/public-facility/pages/public-facilities'
+import RoomsPage from '@/features/room/pages/rooms'
 import RolesPage from '@/features/rbac/pages/roles'
 import ForbiddenPage from '@/routes/forbidden'
 import NotFoundPage from '@/routes/not-found'
@@ -49,6 +54,46 @@ export const router = createBrowserRouter([
             element: (
               <PermissionGate permission="building.READ">
                 <BuildingsPage />
+              </PermissionGate>
+            ),
+          },
+          {
+            path: 'master/rooms',
+            element: (
+              <PermissionGate permission="room.READ">
+                <RoomsPage />
+              </PermissionGate>
+            ),
+          },
+          {
+            path: 'master/room-facilities',
+            element: (
+              <PermissionGate permission="facility.READ">
+                <RoomFacilitiesPage />
+              </PermissionGate>
+            ),
+          },
+          {
+            path: 'master/public-facilities',
+            element: (
+              <PermissionGate permission="facility.READ">
+                <PublicFacilitiesPage />
+              </PermissionGate>
+            ),
+          },
+          {
+            path: 'master/fee-rules',
+            element: (
+              <PermissionGate permission="feeRule.READ">
+                <FeeRulesPage />
+              </PermissionGate>
+            ),
+          },
+          {
+            path: 'master/categories',
+            element: (
+              <PermissionGate permission="category.READ">
+                <CategoriesPage />
               </PermissionGate>
             ),
           },

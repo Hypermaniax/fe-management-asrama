@@ -3,13 +3,11 @@ import { useMutation } from '@tanstack/react-query'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import {
   ArrowRight,
-  CircleAlert,
   LoaderCircle,
   Mail,
   RefreshCw,
   ShieldCheck,
 } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +21,7 @@ import { Label } from '@/components/ui/label'
 import { requestOtp, verifyOtp } from '@/features/auth/api'
 import { isValidEmail } from '@/features/auth/schema'
 import { ApiRequestError } from '@/lib/api'
+import { notifyError, notifySuccess } from '@/lib/notify'
 import { useAuthStore } from '@/stores/auth'
 
 const RESEND_SECONDS = 60
@@ -47,42 +46,28 @@ export default function VerifyOtpPage() {
 
   const verify = useMutation({
     mutationFn: (code: string) => verifyOtp(email, code),
-    onSuccess: (data) => {
-      setSession({ user: data.user, token: data.token })
-      toast.success('Email terverifikasi', {
-        description: 'Akunmu aktif. Selamat datang!',
-      })
+    onSuccess: (res) => {
+      setSession({ user: res.data.user, token: res.data.token })
+      notifySuccess(res.status)
       navigate('/app', { replace: true })
     },
     onError: (error) => {
       setOtp('')
       if (error instanceof ApiRequestError && error.httpStatus === 400) {
-        toast.error('Kode salah atau kedaluwarsa', {
-          description: 'Minta kode baru lalu coba lagi.',
-        })
+        notifyError('Kode salah atau kedaluwarsa', error)
         return
       }
-      toast.error('Verifikasi gagal', {
-        description:
-          error instanceof Error ? error.message : 'Terjadi kesalahan',
-      })
+      notifyError('Verifikasi gagal', error)
     },
   })
 
   const resend = useMutation({
     mutationFn: () => requestOtp(email),
-    onSuccess: () => {
+    onSuccess: (res) => {
       setCooldown(RESEND_SECONDS)
-      toast.success('Kode OTP dikirim ulang', {
-        description: `Cek email ${email}.`,
-      })
+      notifySuccess(res.status, `Cek email ${email}.`)
     },
-    onError: (error) => {
-      toast.error('Gagal mengirim ulang', {
-        description:
-          error instanceof Error ? error.message : 'Terjadi kesalahan',
-      })
-    },
+    onError: (error) => notifyError('Gagal mengirim ulang', error),
   })
 
   const emailValid = isValidEmail(email)
@@ -167,12 +152,6 @@ export default function VerifyOtpPage() {
             />
           </InputOTPGroup>
         </InputOTP>
-        {verify.isError && verify.error instanceof ApiRequestError ? (
-          <p className="flex items-center gap-1.5 rounded-base border-2 border-danger bg-background px-3 py-2 font-heading text-sm">
-            <CircleAlert className="size-4 shrink-0" />
-            {verify.error.message}
-          </p>
-        ) : null}
       </div>
 
       <Button

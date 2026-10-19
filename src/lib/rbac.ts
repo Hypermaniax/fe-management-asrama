@@ -6,7 +6,9 @@ export function can(
   isSuperAdmin: boolean,
   permission: string,
 ): boolean {
-  return isSuperAdmin || permissions.includes(permission)
+  if (isSuperAdmin) return true
+  const target = permission.toLowerCase()
+  return permissions.some((item) => item.toLowerCase() === target)
 }
 
 export function useCan(permission: string): boolean {
@@ -16,11 +18,13 @@ export function useCan(permission: string): boolean {
 }
 
 export function filterMenu(items: MenuNode[]): MenuNode[] {
-  return items.flatMap((item) => {
-    const children = filterMenu(item.children ?? [])
-    if ((!item.path || item.path === '#') && children.length === 0) {
-      return []
-    }
-    return [{ ...item, children }]
-  })
+  return [...items]
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .flatMap((item) => {
+      const children = filterMenu(item.children ?? [])
+      if ((!item.path || item.path === '#') && children.length === 0) {
+        return []
+      }
+      return [{ ...item, children }]
+    })
 }

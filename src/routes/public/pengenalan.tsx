@@ -1,6 +1,8 @@
-import { CalendarClock, PartyPopper } from 'lucide-react'
+import { Link } from 'react-router'
+import { ArrowRight, CalendarClock, PartyPopper } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
+import { buttonVariants } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -12,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { alasan, acaraRutin, acaraTahunan } from '@/data/asrama'
 import { fasilitasKamar as fasilitas } from '@/data/fasilitas'
 import { galeri, kontak, prestasi, tentang } from '@/data/pengenalan'
+import { cn } from '@/lib/utils'
 
 export default function PengenalanPage() {
   return (
@@ -209,6 +212,30 @@ export default function PengenalanPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <section className="mt-12 rounded-base border-2 border-border bg-accent-orange p-8 text-foreground shadow-shadow sm:p-10">
+        <span className="label rounded-base border-2 border-border bg-background px-3 py-1.5 shadow-shadow">
+          Gabung
+        </span>
+        <h2 className="mt-4 font-heading text-2xl text-balance sm:text-3xl">
+          Siap jadi bagian dari asrama?
+        </h2>
+        <p className="mt-3 max-w-2xl text-lg">
+          Daftar sebagai calon penghuni, atau masuk kalau kamu sudah punya akun.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link to="/register" className={cn(buttonVariants({ size: 'lg' }))}>
+            Daftar menjadi penghuni
+            <ArrowRight />
+          </Link>
+          <Link
+            to="/login"
+            className={cn(buttonVariants({ variant: 'neutral', size: 'lg' }))}
+          >
+            Masuk
+          </Link>
+        </div>
+      </section>
     </div>
   )
 }

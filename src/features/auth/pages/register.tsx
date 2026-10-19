@@ -5,7 +5,6 @@ import { Link, useNavigate } from 'react-router'
 import { useForm } from 'react-hook-form'
 import {
   ArrowRight,
-  CircleAlert,
   Eye,
   EyeOff,
   LoaderCircle,
@@ -33,11 +32,11 @@ import {
 } from '@/features/auth/schema'
 import { ApiRequestError } from '@/lib/api'
 import { formErrorClass } from '@/lib/form'
+import { notifyError, notifySuccess } from '@/lib/notify'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
-  const [emailTaken, setEmailTaken] = useState(false)
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -46,28 +45,21 @@ export default function RegisterPage() {
 
   const mutation = useMutation({
     mutationFn: (values: RegisterFormValues) => signUp(values.email, values.password),
-    onSuccess: (data, values) => {
-      toast.success('Pendaftaran berhasil', {
-        description: 'Kode OTP dikirim ke email kamu.',
-      })
+    onSuccess: (res, values) => {
+      notifySuccess(res.status, 'Kode OTP dikirim ke email kamu.')
       navigate(`/verify-otp?email=${encodeURIComponent(values.email)}`, {
         replace: true,
       })
-      void data
     },
     onError: (error) => {
       if (error instanceof ApiRequestError && error.httpStatus === 409) {
-        setEmailTaken(true)
         toast.error('Email sudah terdaftar', {
-          description: 'Masuk saja dengan akun itu, atau pakai email lain.',
+          description: 'Masuk dengan akun itu, atau pakai email lain.',
+          action: { label: 'Masuk', onClick: () => navigate('/login') },
         })
         return
       }
-      setEmailTaken(false)
-      toast.error('Pendaftaran gagal', {
-        description:
-          error instanceof Error ? error.message : 'Terjadi kesalahan',
-      })
+      notifyError('Pendaftaran gagal', error)
     },
   })
 
@@ -175,22 +167,6 @@ export default function RegisterPage() {
               </FormItem>
             )}
           />
-
-          {emailTaken ? (
-            <div className="flex items-start gap-2 rounded-base border-2 border-border bg-accent-teal p-3 text-sm">
-              <CircleAlert className="mt-0.5 size-4 shrink-0" />
-              <p>
-                Email ini sudah terdaftar.{' '}
-                <Link
-                  to="/login"
-                  className="font-heading underline underline-offset-4"
-                >
-                  Masuk di sini
-                </Link>
-                .
-              </p>
-            </div>
-          ) : null}
 
           <Button
             type="submit"

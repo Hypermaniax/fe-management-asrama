@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
 
 import { LoadingButton } from '@/components/shared/loading-button'
 import {
@@ -26,8 +25,9 @@ import { Switch } from '@/components/ui/switch'
 import type { Role } from '@/features/rbac/api'
 import { useCreateRole, useUpdateRole } from '@/features/rbac/hooks'
 import { roleSchema, type RoleFormValues } from '@/features/rbac/schema'
-import { ApiRequestError } from '@/lib/api'
+import { type ApiEnvelope } from '@/lib/api'
 import { formErrorClass } from '@/lib/form'
+import { notifyError, notifySuccess } from '@/lib/notify'
 
 const emptyValues: RoleFormValues = {
   code: '',
@@ -70,21 +70,11 @@ export function RoleFormDialog({
   }, [open, role, form])
 
   const onSubmit = form.handleSubmit((values) => {
-    const onSuccess = () => {
-      toast.success(isEdit ? 'Role diperbarui' : 'Role ditambahkan', {
-        description: values.name,
-      })
+    const onSuccess = (res: ApiEnvelope<Role>) => {
+      notifySuccess(res.status, values.name)
       onOpenChange(false)
     }
-    const onError = (error: unknown) => {
-      const description =
-        error instanceof ApiRequestError && error.httpStatus === 409
-          ? 'Kode role sudah dipakai.'
-          : error instanceof Error
-            ? error.message
-            : 'Terjadi kesalahan'
-      toast.error('Gagal menyimpan', { description })
-    }
+    const onError = (error: unknown) => notifyError('Gagal menyimpan', error)
 
     const description = values.description.trim() || null
 

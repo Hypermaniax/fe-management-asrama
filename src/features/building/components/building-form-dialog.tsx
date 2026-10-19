@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
 
 import { LoadingButton } from '@/components/shared/loading-button'
 import {
@@ -36,8 +35,9 @@ import {
   buildingSchema,
   type BuildingFormValues,
 } from '@/features/building/schema'
-import { ApiRequestError } from '@/lib/api'
+import { type ApiEnvelope } from '@/lib/api'
 import { formErrorClass } from '@/lib/form'
+import { notifyError, notifySuccess } from '@/lib/notify'
 
 const GENDER_ITEMS = [
   { value: 'MALE', label: 'Putra' },
@@ -87,21 +87,11 @@ export function BuildingFormDialog({
   }, [open, building, form])
 
   const onSubmit = form.handleSubmit((values) => {
-    const onSuccess = () => {
-      toast.success(isEdit ? 'Gedung diperbarui' : 'Gedung ditambahkan', {
-        description: values.name,
-      })
+    const onSuccess = (res: ApiEnvelope<Building>) => {
+      notifySuccess(res.status, values.name)
       onOpenChange(false)
     }
-    const onError = (error: unknown) => {
-      const description =
-        error instanceof ApiRequestError && error.httpStatus === 409
-          ? 'Kode gedung sudah dipakai.'
-          : error instanceof Error
-            ? error.message
-            : 'Terjadi kesalahan'
-      toast.error('Gagal menyimpan', { description })
-    }
+    const onError = (error: unknown) => notifyError('Gagal menyimpan', error)
 
     if (building) {
       update.mutate(

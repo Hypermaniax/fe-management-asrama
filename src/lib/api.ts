@@ -38,6 +38,8 @@ export class ApiRequestError extends Error {
 
 export type ApiResponseType = 'json' | 'text' | 'blob'
 
+export type ApiEnvelope<T> = { status: string; data: T }
+
 type ApiFetchOptions = Omit<RequestInit, 'body'> & {
   body?: unknown
   responseType?: ApiResponseType
@@ -110,6 +112,9 @@ export async function apiFetch<T>(
   { body, headers, responseType = 'json', ...init }: ApiFetchOptions = {},
 ): Promise<T> {
   const requestHeaders = new Headers(headers)
+  if (authToken && !requestHeaders.has('Authorization')) {
+    requestHeaders.set('Authorization', `Bearer ${authToken}`)
+  }
   if (body !== undefined && !isRawBody(body) && !requestHeaders.has('Content-Type')) {
     requestHeaders.set('Content-Type', 'application/json')
   }

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { Can } from '@/components/shared/can'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
@@ -12,7 +11,7 @@ import type { Building } from '@/features/building/api'
 import { BuildingFormDialog } from '@/features/building/components/building-form-dialog'
 import { GenderBadge } from '@/features/building/components/gender-badge'
 import { useBuildings, useDeleteBuilding } from '@/features/building/hooks'
-import { ApiRequestError } from '@/lib/api'
+import { notifyError, notifySuccess } from '@/lib/notify'
 
 export default function BuildingsPage() {
   const { data, isLoading, error, refetch } = useBuildings()
@@ -35,16 +34,11 @@ export default function BuildingsPage() {
   const confirmDelete = () => {
     if (!target) return
     remove.mutate(target.id, {
-      onSuccess: () => {
-        toast.success('Gedung dinonaktifkan', { description: target.name })
+      onSuccess: (res) => {
+        notifySuccess(res?.status ?? 'Gedung dinonaktifkan', target.name)
         setTarget(null)
       },
-      onError: (err) => {
-        toast.error('Gagal menonaktifkan', {
-          description:
-            err instanceof ApiRequestError ? err.message : 'Terjadi kesalahan',
-        })
-      },
+      onError: (error) => notifyError('Gagal menonaktifkan', error),
     })
   }
 

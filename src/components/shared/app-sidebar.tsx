@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Link, NavLink, useLocation } from 'react-router'
 import { ChevronRight, CircleDot } from 'lucide-react'
 
@@ -17,6 +18,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSkeleton,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
@@ -85,9 +87,9 @@ function SidebarGroupItem({ item }: { item: MenuNode }) {
   )
 }
 
-export function AppSidebar() {
+export function AppSidebar({ loading = false }: { loading?: boolean }) {
   const menus = useAuthStore((state) => state.menus)
-  const items = filterMenu(menus)
+  const items = useMemo(() => filterMenu(menus), [menus])
 
   return (
     <Sidebar collapsible="icon">
@@ -116,13 +118,19 @@ export function AppSidebar() {
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) =>
-                (item.children ?? []).length > 0 ? (
-                  <SidebarGroupItem key={item.id} item={item} />
-                ) : (
-                  <SidebarLink key={item.id} item={item} />
-                ),
-              )}
+              {loading
+                ? Array.from({ length: 6 }).map((_, index) => (
+                    <SidebarMenuItem key={index}>
+                      <SidebarMenuSkeleton showIcon />
+                    </SidebarMenuItem>
+                  ))
+                : items.map((item) =>
+                    (item.children ?? []).length > 0 ? (
+                      <SidebarGroupItem key={item.id} item={item} />
+                    ) : (
+                      <SidebarLink key={item.id} item={item} />
+                    ),
+                  )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

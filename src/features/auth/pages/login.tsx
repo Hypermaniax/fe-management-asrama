@@ -5,7 +5,6 @@ import { Link, useLocation, useNavigate } from 'react-router'
 import { useForm } from 'react-hook-form'
 import {
   ArrowRight,
-  CircleAlert,
   Eye,
   EyeOff,
   LoaderCircle,
@@ -13,7 +12,6 @@ import {
   LogIn,
   Mail,
 } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -26,9 +24,10 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { signIn } from '@/features/auth/api'
+import { isUnverifiedEmailError } from '@/features/auth/errors'
 import { loginSchema, type LoginFormValues } from '@/features/auth/schema'
-import { ApiRequestError } from '@/lib/api'
 import { formErrorClass } from '@/lib/form'
+import { notifyError, notifySuccess } from '@/lib/notify'
 import { useAuthStore } from '@/stores/auth'
 
 export default function LoginPage() {
@@ -36,7 +35,6 @@ export default function LoginPage() {
   const location = useLocation()
   const setSession = useAuthStore((state) => state.setSession)
   const [showPassword, setShowPassword] = useState(false)
-  const [needsVerification, setNeedsVerification] = useState(false)
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -45,27 +43,22 @@ export default function LoginPage() {
 
   const mutation = useMutation({
     mutationFn: (values: LoginFormValues) => signIn(values.email, values.password),
-    onSuccess: (session) => {
-      setSession(session)
-      toast.success('Berhasil masuk', {
-        description: `Selamat datang, ${session.user.email}`,
-      })
+    onSuccess: (res) => {
+      setSession(res.data)
+      notifySuccess(res.status, `Selamat datang, ${res.data.user.email}`)
       const from = (location.state as { from?: string } | null)?.from ?? '/app'
       navigate(from, { replace: true })
     },
     onError: (error) => {
-      if (error instanceof ApiRequestError && error.httpStatus === 403) {
-        setNeedsVerification(true)
-        toast.error('Email belum diverifikasi', {
-          description: 'Cek kotak masuk untuk kode OTP.',
+      if (isUnverifiedEmailError(error)) {
+        const email = form.getValues('email')
+        notifyError('Email belum diverifikasi', error)
+        navigate(`/verify-otp?email=${encodeURIComponent(email)}`, {
+          replace: true,
         })
         return
       }
-      setNeedsVerification(false)
-      toast.error('Gagal masuk', {
-        description:
-          error instanceof Error ? error.message : 'Terjadi kesalahan',
-      })
+      notifyError('Gagal masuk', error)
     },
   })
 
@@ -147,22 +140,6 @@ export default function LoginPage() {
               </FormItem>
             )}
           />
-
-          {needsVerification ? (
-            <div className="flex items-start gap-2 rounded-base border-2 border-border bg-accent-teal p-3 text-sm">
-              <CircleAlert className="mt-0.5 size-4 shrink-0" />
-              <p>
-                Akun kamu belum diverifikasi.{' '}
-                <Link
-                  to={`/verify-otp?email=${encodeURIComponent(form.getValues('email'))}`}
-                  className="font-heading underline underline-offset-4"
-                >
-                  Verifikasi sekarang
-                </Link>
-                .
-              </p>
-            </div>
-          ) : null}
 
           <Button
             type="submit"

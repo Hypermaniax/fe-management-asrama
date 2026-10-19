@@ -1,10 +1,16 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type MouseEvent, type ReactNode } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { EmptyState } from '@/components/shared/empty-state'
 import { ErrorState } from '@/components/shared/error-state'
 import { SkeletonTable } from '@/components/shared/skeletons'
-import { Button } from '@/components/ui/button'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+} from '@/components/ui/pagination'
 import {
   Table,
   TableBody,
@@ -13,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { cn } from '@/lib/utils'
 
 export type Column<T> = {
   key: string
@@ -123,6 +130,25 @@ function DataTableContent<T>({
   )
 }
 
+type PageItem = number | 'ellipsis'
+
+function pageItems(current: number, total: number): PageItem[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, index) => index + 1)
+  }
+
+  const items: PageItem[] = [1]
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+
+  if (start > 2) items.push('ellipsis')
+  for (let page = start; page <= end; page += 1) items.push(page)
+  if (end < total - 1) items.push('ellipsis')
+  items.push(total)
+
+  return items
+}
+
 function TablePagination({
   page,
   totalPages,
@@ -138,36 +164,73 @@ function TablePagination({
   total: number
   onPageChange: (page: number) => void
 }) {
+  const goTo = (next: number) => (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault()
+    if (next < 1 || next > totalPages || next === page) return
+    onPageChange(next)
+  }
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-sm text-foreground/70">
         Menampilkan {start + 1}–{end} dari {total}
       </p>
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="neutral"
-          size="icon-sm"
-          aria-label="Halaman sebelumnya"
-          disabled={page <= 1}
-          onClick={() => onPageChange(page - 1)}
-        >
-          <ChevronLeft />
-        </Button>
-        <span className="font-heading text-sm">
-          {page} / {totalPages}
-        </span>
-        <Button
-          type="button"
-          variant="neutral"
-          size="icon-sm"
-          aria-label="Halaman berikutnya"
-          disabled={page >= totalPages}
-          onClick={() => onPageChange(page + 1)}
-        >
-          <ChevronRight />
-        </Button>
-      </div>
+      <Pagination className="mx-0 w-auto justify-end">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationLink
+              href="#"
+              size="default"
+              aria-label="Halaman sebelumnya"
+              aria-disabled={page <= 1}
+              className={cn(
+                'gap-1 pl-2.5',
+                page <= 1 && 'pointer-events-none opacity-50',
+              )}
+              onClick={goTo(page - 1)}
+            >
+              <ChevronLeft className="size-4" />
+              <span className="hidden sm:inline">Sebelumnya</span>
+            </PaginationLink>
+          </PaginationItem>
+
+          {pageItems(page, totalPages).map((item, index) =>
+            item === 'ellipsis' ? (
+              <PaginationItem key={`ellipsis-${index}`}>
+                <PaginationEllipsis />
+              </PaginationItem>
+            ) : (
+              <PaginationItem key={item}>
+                <PaginationLink
+                  href="#"
+                  isActive={item === page}
+                  aria-label={`Halaman ${item}`}
+                  onClick={goTo(item)}
+                >
+                  {item}
+                </PaginationLink>
+              </PaginationItem>
+            ),
+          )}
+
+          <PaginationItem>
+            <PaginationLink
+              href="#"
+              size="default"
+              aria-label="Halaman berikutnya"
+              aria-disabled={page >= totalPages}
+              className={cn(
+                'gap-1 pr-2.5',
+                page >= totalPages && 'pointer-events-none opacity-50',
+              )}
+              onClick={goTo(page + 1)}
+            >
+              <span className="hidden sm:inline">Berikutnya</span>
+              <ChevronRight className="size-4" />
+            </PaginationLink>
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { apiFetch } from '@/lib/api'
+import { apiFetch, type ApiEnvelope } from '@/lib/api'
 
 export type AuthUser = {
   id: string
@@ -28,46 +28,40 @@ export type Session = {
   token: string
 }
 
-type Envelope<T> = { status: string; data: T }
-
-export async function signUp(email: string, password: string) {
-  const res = await apiFetch<Envelope<{ user: AuthUser }>>('/auth/register', {
+export function signUp(email: string, password: string) {
+  return apiFetch<ApiEnvelope<{ user: AuthUser }>>('/auth/register', {
     method: 'POST',
     body: { email, password },
   })
-  return res.data
 }
 
-export async function signIn(email: string, password: string) {
-  const res = await apiFetch<Envelope<Session>>('/auth/login', {
+export function signIn(email: string, password: string) {
+  return apiFetch<ApiEnvelope<Session>>('/auth/login', {
     method: 'POST',
     body: { email, password },
   })
-  return res.data
 }
 
-export async function requestOtp(email: string) {
-  const res = await apiFetch<Envelope<{ sent: boolean }>>('/auth/request-otp', {
+export function requestOtp(email: string) {
+  return apiFetch<ApiEnvelope<{ sent: boolean }>>('/auth/request-otp', {
     method: 'POST',
     body: { email },
   })
-  return res.data
 }
 
-export async function verifyOtp(email: string, otp: string) {
-  const res = await apiFetch<Envelope<{ verified: boolean } & Session>>(
+export function verifyOtp(email: string, otp: string) {
+  return apiFetch<ApiEnvelope<{ verified: boolean } & Session>>(
     '/auth/verify-otp',
     { method: 'POST', body: { email, otp } },
   )
-  return res.data
 }
 
 export async function fetchMe() {
-  const res = await apiFetch<Envelope<AuthUser>>('/auth/me')
+  const res = await apiFetch<ApiEnvelope<AuthUser>>('/auth/me')
   return res.data
 }
 
 export async function fetchAccess() {
-  const res = await apiFetch<Envelope<Access>>('/rbac/me')
+  const res = await apiFetch<ApiEnvelope<Access>>('/rbac/me')
   return res.data
 }

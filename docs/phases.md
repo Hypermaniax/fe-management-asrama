@@ -1,6 +1,6 @@
 # Rencana Fase (Detail) — Front-End Asrama Mahasiswa Kepri
 
-Legenda: `[ ]` belum · `[x]` selesai. Dokumen ini diturunkan dari [`plan.md`](./plan.md) → [`ui.md`](./ui.md).
+Legenda: `[ ]` belum · `[x]` selesai · `[~]` ditunda (blocked API atau dijadwalkan di fase lain). Dokumen ini diturunkan dari [`plan.md`](./plan.md) → [`ui.md`](./ui.md).
 
 > **Sumber kebenaran endpoint: [`api.md`](./api.md).** Jangan memakai asumsi dari luar dokumen ini.
 > Semua modul yang tercatat di `api.md` sudah tersedia; tidak perlu mock. Yang belum didukung API dibuat `disabled`/deferred, bukan data palsu.
@@ -85,9 +85,10 @@ Aturan umum:
 - [x] Setelah verifikasi/login → `GET /rbac/me` → isi access.
 - [x] `401` → clear session + redirect `/login`.
 - [x] Pindahkan page ke `features/auth/pages/` dan update router.
-- [ ] Tangani error “Email not verified” → arahkan ke `/verify-otp`.
-- [ ] Verifikasi alur register → OTP → login dengan BE.
-- [ ] Verifikasi: `pnpm lint` + `pnpm build`.
+- [x] Tangani error “Email not verified” → arahkan ke `/verify-otp`.
+- [x] Pesan sukses pakai field `status` API + error via toast (`lib/notify.ts`); error inline dihapus.
+- [x] Verifikasi alur register → OTP → login dengan BE (`403 "Email not verified"` → `/verify-otp` → login 200 → `/rbac/me`).
+- [x] Verifikasi: `pnpm lint` + `pnpm build`.
 
 ---
 
@@ -99,16 +100,20 @@ Aturan umum:
 
 - [x] `app/router.tsx`: layout routes **public**, **auth**, **protected**.
 - [x] `AppLayout`: sidebar dari `menus`, topbar (pemilih gedung, user menu), breadcrumb.
-- [x] `stores/scope.ts`, `stores/ui.ts`.
+- [x] `stores/scope.ts` (gedung aktif, persisten). `stores/ui.ts` dihapus — state sidebar ditangani `SidebarProvider` shadcn (persist via cookie).
 - [x] `lib/rbac.ts`: `can`, `useCan`, `filterMenu`.
 - [x] `<Can>` + `PermissionGate`, halaman 403/404.
 - [x] Mobile sidebar drawer.
 - [x] Roles: list, create, edit, nonaktifkan (`isSystem` terkunci).
 - [x] Pindahkan page roles ke `features/rbac/pages/`.
-- [ ] Role detail `/app/system/roles/:id` → **deferred**: `api.md` belum punya endpoint daftar permission/menu.
-- [ ] Assign/revoke role ke user → dikerjakan di Fase 11.
-- [ ] Verifikasi sidebar & akses dengan akun demo.
-- [ ] Verifikasi: `pnpm lint` + `pnpm build`.
+- [x] Menu diurutkan `sortOrder` (`filterMenu`), ikon menu anak di `lib/menu-icons.ts`.
+- [x] Skeleton sidebar saat `/rbac/me` memuat (`SidebarMenuSkeleton`).
+- [x] Error `/rbac/me` → `ErrorState` + coba lagi (401 dikecualikan, ditangani redirect global).
+- [x] `DataTable` pakai komponen `Pagination` registry (nomor halaman + ellipsis).
+- [~] Role detail `/app/system/roles/:id` → **deferred**: `api.md §4` tidak punya `GET /rbac/roles/:id` maupun katalog `GET permission/menu`, jadi `PUT /roles/:id/{permissions,menus}` tak bisa diisi.
+- [~] Assign/revoke role ke user → dikerjakan di Fase 11 (butuh daftar user dari modul Penghuni, Fase 6).
+- [x] Verifikasi sidebar & akses dengan akun demo (`/rbac/me` admin/gedung/warga/calon; menu & permission cocok; permission lowercase BE ditangani `can` case-insensitive).
+- [x] Verifikasi: `pnpm lint` + `pnpm build`.
 
 ---
 
@@ -117,9 +122,9 @@ Aturan umum:
 **Tujuan:** situs publik tanpa API.
 
 - [x] `/` (hero, marquee, wilayah, fasilitas, kegiatan, testimoni, CTA).
-- [x] `/pengenalan` (tentang, visi/misi, gedung, fasilitas, kontak).
+- [x] `/pengenalan` (tentang, visi/misi, gedung, fasilitas, kontak) + CTA daftar/masuk di bawah (`ui.md §2.2`).
 - [x] `PublicLayout` + motif pulau.
-- [ ] Verifikasi responsive + CTA ke `/login` dan `/register`.
+- [x] Verifikasi responsive (breakpoint `sm/md/lg`, nav mobile via `Sheet`) + CTA ke `/login` dan `/register` ada di hero, CTA, header, footer, dan `/pengenalan`; aset gambar `/images/*.svg` tersedia.
 
 ---
 
@@ -129,13 +134,16 @@ Aturan umum:
 
 **Halaman:** `/app/dashboard` · **Feature:** `features/dashboard`
 
-- [x] Route + placeholder.
-- [ ] Kartu statistik + chart + daftar ringkas.
-- [ ] Admin: `/reports/*`, `/cash-accounts/:id/balance`, `/events`, `/elections`.
-- [ ] PENGHUNI: hanya endpoint self (`/payments?userId=`, `/events/me/attendance`, `/elections`).
-- [ ] Aktifkan data nyata setelah Fase 7, 9, dan 10.
-- [ ] Skeleton kartu + empty state.
-- [ ] Verifikasi: `pnpm lint` + `pnpm build`.
+- [x] Route + page `features/dashboard` (route tipis re-export).
+- [x] Kartu statistik + bar chart (income vs expense + breakdown kategori) + daftar ringkas.
+- [x] Manajemen (`report.READ`): `/reports/arrears`, `/reports/cash-balances`, `/reports/income-vs-expense`, `/events`, `/elections?status=OPEN`.
+- [x] PENGHUNI: self (`/invoices` untuk tagihan — **asumsi server-scope**, `/payments?userId=`, `/events/me/attendance`, `/events`, `/elections`) + pintasan `/app/me/*`.
+- [x] CALON_PENGHUNI: welcome + CTA dokumen.
+- [x] Data nyata aktif (shape lengkap di `api.md`); tidak menunggu Fase 7/9/10.
+- [x] Skeleton (`DashboardSkeleton`) + empty state per seksi.
+- [x] Verifikasi: `pnpm lint` + `pnpm build`.
+
+> Catatan: `ui.md §5.1` minta "line chart kas", tetapi `api.md` tidak punya endpoint time-series kas — dipakai bar chart `income-vs-expense` + breakdown kategori. Filter tagihan self (blocker #4) memakai `GET /invoices` dengan asumsi BE membatasi ke user login.
 
 ---
 
@@ -148,31 +156,34 @@ Aturan umum:
 - [x] Route `/app/master/buildings`.
 
 ### 5.2 Kamar (§6)
-- [ ] Feature `room`; endpoint `POST/GET /rooms`, `PATCH/DELETE /rooms/:id`.
-- [ ] Halaman `/app/master/rooms`: list/form, filter gedung/status, kapasitas.
-- [ ] Permission `room.*`.
+- [x] Feature `room`; endpoint `POST/GET /rooms`, `PATCH/DELETE /rooms/:id`.
+- [x] Halaman `/app/master/rooms`: list/form, filter gedung/status, kapasitas.
+- [x] Permission `room.*` (`Can` per aksi + `PermissionGate` route).
+- Catatan: `api.md` `Room` tidak menyediakan `tarif`/`penghuni terisi`; kolom dibatasi nomor/gedung/kapasitas/status (tarif dari Aturan Biaya; terisi tunggu modul Penempatan Fase 6).
 
 ### 5.3 Aturan Biaya (§7)
-- [ ] Feature `fee-rule`; endpoint `POST/GET /fee-rules`, `DELETE /fee-rules/:id`.
-- [ ] Halaman `/app/master/fee-rules`: list/form, nonaktifkan.
-- [ ] Permission `feeRule.*`.
+- [x] Feature `fee-rule`; endpoint `POST/GET /fee-rules`, `DELETE /fee-rules/:id`.
+- [x] Halaman `/app/master/fee-rules`: list + form create + nonaktifkan (tidak ada `PATCH` di `api.md`).
+- [x] Permission `feeRule.*`.
 
 ### 5.4 Fasilitas (§8)
-- [ ] Feature `facility`; endpoint katalog + `GET/PUT /facilities/rooms/:roomId`.
-- [ ] Halaman `/app/master/room-facilities`: katalog + editor fasilitas per kamar.
-- [ ] Permission `facility.*`.
+- [x] Feature `facility`; endpoint katalog + `GET/PUT /facilities/rooms/:roomId`.
+- [x] Halaman `/app/master/room-facilities`: tab **Katalog** (CRUD `scope=ROOM`) + tab **Per kamar** (editor fasilitas via `PUT`).
+- [x] Permission `facility.*`.
+- Catatan: `PATCH /facilities/:id` hanya mengirim `{ name, category, isActive }` (scope/usageMode/code dianggap tetap, tidak ada kontrak tegas di `api.md`).
 
 ### 5.5 Fasilitas Umum (§9)
-- [ ] Feature `public-facility`; endpoint list/form + `POST /public-facilities/:id/assign`, `GET /public-facilities/:id/assignments`, `DELETE /public-facilities/assignments/:assignmentId`.
-- [ ] Halaman `/app/master/public-facilities`: list/form + assign/release slot.
-- [ ] Permission `facility.*`.
+- [x] Feature `public-facility`; endpoint list/form + `POST /public-facilities/:id/assign`, `GET /public-facilities/:id/assignments`, `DELETE /public-facilities/assignments/:assignmentId`.
+- [x] Halaman `/app/master/public-facilities`: list/form + assign/release slot (dialog).
+- [x] Permission `facility.*` (slot: `facility.CREATE`/`facility.DELETE`).
+- Catatan: pemilih penghuni memakai `GET /residents?buildingId=` seadanya (`user.READ`); `ResidentPicker` penuh menyusul Fase 6.
 
 ### 5.6 Kategori Kas (§16)
-- [ ] Feature `category`; endpoint `POST/GET /categories`, `PATCH/DELETE /categories/:id`.
-- [ ] Halaman `/app/master/categories`: list/form INCOME/EXPENSE.
-- [ ] Permission `category.*`.
+- [x] Feature `category`; endpoint `POST/GET /categories`, `PATCH/DELETE /categories/:id`.
+- [x] Halaman `/app/master/categories`: list/form INCOME/EXPENSE.
+- [x] Permission `category.*`.
 
-- [ ] Verifikasi: `pnpm lint` + `pnpm build`.
+- [x] Verifikasi: `pnpm lint` + `pnpm build` ✅ (tanpa BE).
 
 ---
 
@@ -304,7 +315,7 @@ Aturan umum:
 - [x] **11.1 Roles**: list/form/nonaktifkan.
 - [ ] **11.2 Users**: read-only dari `/residents` + assign/revoke role via `/rbac/assign` dan `DELETE /rbac/user-roles/:id`. Tidak ada CRUD user di `api.md`.
 - [ ] **11.3 Audit** (§23): `/app/system/audit`, list/filter + detail.
-- [ ] **11.4 Permission/Menu**: **deferred** — `api.md` tidak menyediakan endpoint daftar/simpan permission & menu di luar `PUT /rbac/roles/:id/{permissions,menus}`.
+- [~] **11.4 Permission/Menu**: **deferred** — `api.md` tidak menyediakan endpoint daftar/simpan permission & menu di luar `PUT /rbac/roles/:id/{permissions,menus}`.
 - [ ] Khusus SUPER_ADMIN.
 - [ ] Verifikasi: `pnpm lint` + `pnpm build`.
 
@@ -316,7 +327,7 @@ Aturan umum:
 
 **Halaman:** `/app/me/{profile,invoices,documents,attendance,elections}`
 
-- [ ] **12.1 Profil**: `/auth/me` hanya `id`+`email`; profil lengkap **deferred** sampai ada endpoint.
+- [~] **12.1 Profil**: `/auth/me` hanya `id`+`email`; profil lengkap **deferred** sampai ada endpoint.
 - [ ] **12.2 Tagihan**: `/app/me/invoices`; perlu klarifikasi filter self karena `api.md` tidak mencantumkan `userId` pada `GET /invoices`.
 - [ ] **12.3 Dokumen**: `/app/me/documents` — required, list milik sendiri, upload.
 - [ ] **12.4 Absensi**: `/app/me/attendance` — `/events/me/attendance`.
@@ -346,3 +357,4 @@ Aturan umum:
 4. **Tagihan self** belum jelas filternya (`GET /invoices` tanpa `userId`).
 5. **Pagination/sorting** belum ada kontrak query di `api.md`; gunakan client-side sementara.
 6. **Dashboard** tidak punya endpoint khusus; harus disusun dari modul lain dan role-aware.
+7. **Casing permission tidak konsisten**: `api.md` menulis `building.READ` (uppercase), tetapi `/rbac/me` dari BE mengembalikan lowercase (`building.read`). Sudah dinormalisasi case-insensitive di `lib/rbac.ts` (`can`), dipakai `<Can>` + `PermissionGate`.

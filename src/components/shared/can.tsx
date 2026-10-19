@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { useAuthStore } from '@/stores/auth'
+import { useCan } from '@/lib/rbac'
 
 export function Can({
   permission,
@@ -11,10 +11,7 @@ export function Can({
   children: ReactNode
   fallback?: ReactNode
 }) {
-  const isSuperAdmin = useAuthStore((state) => state.isSuperAdmin)
-  const permissions = useAuthStore((state) => state.permissions)
-
-  const allowed = isSuperAdmin || permissions.includes(permission)
+  const allowed = useCan(permission)
 
   return <>{allowed ? children : fallback}</>
 }
