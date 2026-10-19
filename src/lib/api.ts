@@ -11,60 +11,134 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler
 }
 
-export type ApiError = {
-  status: number
+export type ApiValidationIssue = {
+  path?: Array<string | number>
+  message?: string
   code?: string
+  [key: string]: unknown
+}
+
+export type ApiError = {
+  httpStatus: number
   message: string
+  errors?: ApiValidationIssue[]
 }
 
 export class ApiRequestError extends Error {
-  readonly status: number
-  readonly code?: string
+  readonly httpStatus: number
+  readonly errors?: ApiValidationIssue[]
 
-  constructor({ status, code, message }: ApiError) {
+  constructor({ httpStatus, message, errors }: ApiError) {
     super(message)
     this.name = 'ApiRequestError'
-    this.status = status
-    this.code = code
+    this.httpStatus = httpStatus
+    this.errors = errors
   }
 }
 
-type ApiFetchOptions = Omit<RequestInit, 'body'> & { body?: unknown }
+export type ApiResponseType = 'json' | 'text' | 'blob'
+
+type ApiFetchOptions = Omit<RequestInit, 'body'> & {
+  body?: unknown
+  responseType?: ApiResponseType
+}
+
+const isRawBody = (body: unknown): body is BodyInit =>
+  body instanceof FormData ||
+  body instanceof Blob ||
+  body instanceof URLSearchParams ||
+  typeof body === 'string'
+
+type ErrorPayload = {
+  status?: unknown
+  message?: unknown
+  error?: unknown
+  errors?: unknown
+}
+
+function readErrorMessage(payload: ErrorPayload, fallback: string): string {
+  const candidates = [payload.status, payload.message, payload.error]
+  const found = candidates.find((value) => typeof value === 'string')
+  return typeof found === 'string' ? found : fallback
+}
+
+function readValidationIssues(payload: ErrorPayload): ApiValidationIssue[] | undefined {
+  return Array.isArray(payload.errors)
+    ? (payload.errors as ApiValidationIssue[])
+    : undefined
+}
+
+async function parseError(response: Response): Promise<{
+  message: string
+  errors?: ApiValidationIssue[]
+}> {
+  const fallback = `Permintaan gagal (${response.status})`
+  const text = await response.text()
+  if (!text) return { message: fallback }
+
+  try {
+    const payload = JSON.parse(text) as ErrorPayload
+    return {
+      message: readErrorMessage(payload, fallback),
+      errors: readValidationIssues(payload),
+    }
+  } catch {
+    return { message: text }
+  }
+}
+
+async function parseSuccess<T>(
+  response: Response,
+  responseType: ApiResponseType,
+): Promise<T> {
+  if (response.status === 204) return undefined as T
+  if (responseType === 'blob') return (await response.blob()) as T
+  if (responseType === 'text') return (await response.text()) as T
+
+  const text = await response.text()
+  if (!text) return undefined as T
+
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    return text as T
+  }
+}
 
 export async function apiFetch<T>(
   path: string,
-  { body, headers, ...init }: ApiFetchOptions = {},
+  { body, headers, responseType = 'json', ...init }: ApiFetchOptions = {},
 ): Promise<T> {
+  const requestHeaders = new Headers(headers)
+  if (body !== undefined && !isRawBody(body) && !requestHeaders.has('Content-Type')) {
+    requestHeaders.set('Content-Type', 'application/json')
+  }
+
+  const requestBody =
+    body === undefined
+      ? undefined
+      : isRawBody(body)
+        ? body
+        : JSON.stringify(body)
+
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-      ...headers,
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    headers: requestHeaders,
+    body: requestBody,
   })
 
   if (!response.ok) {
-    let payload: { code?: string; message?: string; error?: string } = {}
-    try {
-      payload = (await response.json()) as typeof payload
-    } catch {
-      payload = {}
-    }
     if (response.status === 401 && authToken) {
       onUnauthorized?.()
     }
+
+    const { message, errors } = await parseError(response)
     throw new ApiRequestError({
-      status: response.status,
-      code: payload.code,
-      message: payload.message ?? payload.error ?? 'Terjadi kesalahan',
+      httpStatus: response.status,
+      message,
+      errors,
     })
   }
 
-  if (response.status === 204) {
-    return undefined as T
-  }
-
-  return (await response.json()) as T
+  return parseSuccess<T>(response, responseType)
 }

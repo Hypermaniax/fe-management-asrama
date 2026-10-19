@@ -21,12 +21,11 @@ import {
 } from '@/components/ui/input-otp'
 import { Label } from '@/components/ui/label'
 import { requestOtp, verifyOtp } from '@/features/auth/api'
+import { isValidEmail } from '@/features/auth/schema'
 import { ApiRequestError } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 
 const RESEND_SECONDS = 60
-
-const emailPattern = /^\S+@\S+\.\S+$/
 
 export default function VerifyOtpPage() {
   const navigate = useNavigate()
@@ -57,7 +56,7 @@ export default function VerifyOtpPage() {
     },
     onError: (error) => {
       setOtp('')
-      if (error instanceof ApiRequestError && error.status === 400) {
+      if (error instanceof ApiRequestError && error.httpStatus === 400) {
         toast.error('Kode salah atau kedaluwarsa', {
           description: 'Minta kode baru lalu coba lagi.',
         })
@@ -86,7 +85,7 @@ export default function VerifyOtpPage() {
     },
   })
 
-  const emailValid = emailPattern.test(email)
+  const emailValid = isValidEmail(email)
   const canVerify = emailValid && otp.length === 6 && !verify.isPending
 
   return (

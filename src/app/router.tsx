@@ -1,14 +1,17 @@
 import { createBrowserRouter, Navigate } from 'react-router'
 
 import { RequireAuth } from '@/components/shared/require-auth'
+import { PermissionGate } from '@/components/shared/permission-gate'
 import { AppLayout } from '@/layouts/app-layout'
 import { AuthLayout } from '@/layouts/auth-layout'
 import { PublicLayout } from '@/layouts/public-layout'
 import AppPlaceholderPage from '@/routes/app/placeholder'
 import DashboardPage from '@/routes/app/dashboard'
-import LoginPage from '@/routes/auth/login'
-import RegisterPage from '@/routes/auth/register'
-import VerifyOtpPage from '@/routes/auth/verify-otp'
+import LoginPage from '@/features/auth/pages/login'
+import RegisterPage from '@/features/auth/pages/register'
+import VerifyOtpPage from '@/features/auth/pages/verify-otp'
+import BuildingsPage from '@/features/building/pages/buildings'
+import RolesPage from '@/features/rbac/pages/roles'
 import ForbiddenPage from '@/routes/forbidden'
 import NotFoundPage from '@/routes/not-found'
 import HomePage from '@/routes/public/index'
@@ -41,6 +44,22 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="/app/dashboard" replace /> },
           { path: 'dashboard', element: <DashboardPage /> },
+          {
+            path: 'master/buildings',
+            element: (
+              <PermissionGate permission="building.READ">
+                <BuildingsPage />
+              </PermissionGate>
+            ),
+          },
+          {
+            path: 'system/roles',
+            element: (
+              <PermissionGate permission="role.READ">
+                <RolesPage />
+              </PermissionGate>
+            ),
+          },
           { path: '403', element: <ForbiddenPage /> },
           { path: '*', element: <AppPlaceholderPage /> },
         ],

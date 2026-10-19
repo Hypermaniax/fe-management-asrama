@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { useForm } from 'react-hook-form'
 import {
   ArrowRight,
@@ -10,73 +10,59 @@ import {
   EyeOff,
   LoaderCircle,
   Lock,
+  LogIn,
   Mail,
-  UserPlus,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { signUp } from '@/features/auth/api'
+import { signIn } from '@/features/auth/api'
+import { loginSchema, type LoginFormValues } from '@/features/auth/schema'
 import { ApiRequestError } from '@/lib/api'
+import { formErrorClass } from '@/lib/form'
+import { useAuthStore } from '@/stores/auth'
 
-const schema = z
-  .object({
-    email: z.email('Email tidak valid'),
-    password: z.string().min(8, 'Kata sandi minimal 8 karakter'),
-    confirm: z.string().min(1, 'Konfirmasi kata sandi wajib diisi'),
-  })
-  .refine((values) => values.password === values.confirm, {
-    path: ['confirm'],
-    message: 'Kata sandi tidak cocok',
-  })
-
-type FormValues = z.infer<typeof schema>
-
-const errorClass =
-  'flex items-center gap-1.5 rounded-base border-2 border-danger bg-background px-3 py-2 font-heading text-sm'
-
-export default function RegisterPage() {
+export default function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const setSession = useAuthStore((state) => state.setSession)
   const [showPassword, setShowPassword] = useState(false)
-  const [emailTaken, setEmailTaken] = useState(false)
+  const [needsVerification, setNeedsVerification] = useState(false)
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { email: '', password: '', confirm: '' },
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
   })
 
   const mutation = useMutation({
-    mutationFn: (values: FormValues) => signUp(values.email, values.password),
-    onSuccess: (data, values) => {
-      toast.success('Pendaftaran berhasil', {
-        description: 'Kode OTP dikirim ke email kamu.',
+    mutationFn: (values: LoginFormValues) => signIn(values.email, values.password),
+    onSuccess: (session) => {
+      setSession(session)
+      toast.success('Berhasil masuk', {
+        description: `Selamat datang, ${session.user.email}`,
       })
-      navigate(`/verify-otp?email=${encodeURIComponent(values.email)}`, {
-        replace: true,
-      })
-      void data
+      const from = (location.state as { from?: string } | null)?.from ?? '/app'
+      navigate(from, { replace: true })
     },
     onError: (error) => {
-      if (error instanceof ApiRequestError && error.status === 409) {
-        setEmailTaken(true)
-        toast.error('Email sudah terdaftar', {
-          description: 'Masuk saja dengan akun itu, atau pakai email lain.',
+      if (error instanceof ApiRequestError && error.httpStatus === 403) {
+        setNeedsVerification(true)
+        toast.error('Email belum diverifikasi', {
+          description: 'Cek kotak masuk untuk kode OTP.',
         })
         return
       }
-      setEmailTaken(false)
-      toast.error('Pendaftaran gagal', {
+      setNeedsVerification(false)
+      toast.error('Gagal masuk', {
         description:
           error instanceof Error ? error.message : 'Terjadi kesalahan',
       })
@@ -86,10 +72,10 @@ export default function RegisterPage() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <span className="label text-foreground/60">Calon penghuni</span>
-        <h1 className="font-heading text-2xl">Daftar</h1>
+        <span className="label text-foreground/60">Akun</span>
+        <h1 className="font-heading text-2xl">Masuk</h1>
         <p className="text-sm text-foreground/80">
-          Buat akun untuk mendaftar jadi penghuni asrama.
+          Lanjutkan ke akun asrama kamu.
         </p>
       </header>
 
@@ -117,7 +103,7 @@ export default function RegisterPage() {
                     />
                   </FormControl>
                 </div>
-                <FormMessage className={errorClass} />
+                <FormMessage className={formErrorClass} />
               </FormItem>
             )}
           />
@@ -133,8 +119,8 @@ export default function RegisterPage() {
                   <FormControl>
                     <Input
                       type={showPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      placeholder="Minimal 8 karakter"
+                      autoComplete="current-password"
+                      placeholder="••••••••"
                       className="pl-9 pr-11"
                       {...field}
                     />
@@ -157,47 +143,21 @@ export default function RegisterPage() {
                     )}
                   </button>
                 </div>
-                <FormDescription className="text-foreground/70">
-                  Minimal 8 karakter.
-                </FormDescription>
-                <FormMessage className={errorClass} />
+                <FormMessage className={formErrorClass} />
               </FormItem>
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="confirm"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Konfirmasi kata sandi</FormLabel>
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/50" />
-                  <FormControl>
-                    <Input
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      placeholder="Ulangi kata sandi"
-                      className="pl-9"
-                      {...field}
-                    />
-                  </FormControl>
-                </div>
-                <FormMessage className={errorClass} />
-              </FormItem>
-            )}
-          />
-
-          {emailTaken ? (
+          {needsVerification ? (
             <div className="flex items-start gap-2 rounded-base border-2 border-border bg-accent-teal p-3 text-sm">
               <CircleAlert className="mt-0.5 size-4 shrink-0" />
               <p>
-                Email ini sudah terdaftar.{' '}
+                Akun kamu belum diverifikasi.{' '}
                 <Link
-                  to="/login"
+                  to={`/verify-otp?email=${encodeURIComponent(form.getValues('email'))}`}
                   className="font-heading underline underline-offset-4"
                 >
-                  Masuk di sini
+                  Verifikasi sekarang
                 </Link>
                 .
               </p>
@@ -217,8 +177,8 @@ export default function RegisterPage() {
               </>
             ) : (
               <>
-                <UserPlus />
-                Daftar
+                <LogIn />
+                Masuk
                 <ArrowRight />
               </>
             )}
@@ -227,12 +187,12 @@ export default function RegisterPage() {
       </Form>
 
       <p className="text-sm">
-        Sudah punya akun?{' '}
+        Belum punya akun?{' '}
         <Link
-          to="/login"
+          to="/register"
           className="font-heading underline underline-offset-4"
         >
-          Masuk
+          Daftar sebagai calon penghuni
         </Link>
       </p>
     </div>
