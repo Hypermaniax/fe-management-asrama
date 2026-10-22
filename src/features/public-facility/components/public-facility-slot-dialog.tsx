@@ -27,8 +27,8 @@ import {
   useAssignments,
   useAssignSlot,
   useReleaseAssignment,
-  useResidentOptions,
 } from '@/features/public-facility/hooks'
+import { useResidents } from '@/features/resident/hooks'
 import { notifyError, notifySuccess } from '@/lib/notify'
 
 export function PublicFacilitySlotDialog({
@@ -41,7 +41,10 @@ export function PublicFacilitySlotDialog({
   publicFacility?: PublicFacility | null
 }) {
   const assignments = useAssignments(publicFacility?.id, open)
-  const residents = useResidentOptions(publicFacility?.buildingId, open)
+  const residents = useResidents(
+    open ? publicFacility?.buildingId : null,
+    'ACTIVE',
+  )
   const assign = useAssignSlot()
   const release = useReleaseAssignment()
 
@@ -51,12 +54,10 @@ export function PublicFacilitySlotDialog({
 
   const residentItems = useMemo(
     () =>
-      (residents.data ?? [])
-        .filter((resident) => resident.status === 'ACTIVE')
-        .map((resident) => ({
-          value: resident.id,
-          label: resident.name ?? resident.email,
-        })),
+      (residents.data ?? []).map((resident) => ({
+        value: resident.id,
+        label: resident.name ?? resident.email,
+      })),
     [residents.data],
   )
 

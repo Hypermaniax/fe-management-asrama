@@ -103,10 +103,3 @@ export function releaseAssignment(assignmentId: string) {
     { method: 'DELETE' },
   )
 }
-
-export async function fetchResidentOptions(buildingId: string) {
-  const res = await apiFetch<ApiEnvelope<AssignmentUser[]>>(
-    `/residents?buildingId=${buildingId}`,
-  )
-  return res.data
-}

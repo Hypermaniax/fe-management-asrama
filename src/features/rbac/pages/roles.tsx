@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { useState } from 'react'
 import { Lock, Pencil, Plus, Trash2 } from 'lucide-react'
 
@@ -75,6 +76,21 @@ export default function RolesPage() {
       cell: (row) => (
         <StatusBadge status={row.isActive ? 'ACTIVE' : 'INACTIVE'} />
       ),
+    },
+    {
+      key: 'detail',
+      header: 'Permission & Menu',
+      cell: (row) =>
+        row.isSystem ? (
+          <span className="text-foreground/30">—</span>
+        ) : (
+          <Link
+            to={`/app/system/roles/${row.id}`}
+            className="font-heading underline-offset-2 hover:underline"
+          >
+            Atur →
+          </Link>
+        ),
     },
     {
       key: 'actions',

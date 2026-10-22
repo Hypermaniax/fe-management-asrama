@@ -6,7 +6,6 @@ import {
   deletePublicFacility,
   fetchAssignments,
   fetchPublicFacilities,
-  fetchResidentOptions,
   releaseAssignment,
   updatePublicFacility,
   type AssignmentInput,
@@ -27,14 +26,6 @@ export function useAssignments(publicFacilityId?: string | null, enabled = true)
     queryKey: ['public-facility-assignments', publicFacilityId ?? null],
     queryFn: () => fetchAssignments(publicFacilityId as string),
     enabled: enabled && Boolean(publicFacilityId),
-  })
-}
-
-export function useResidentOptions(buildingId?: string | null, enabled = true) {
-  return useQuery({
-    queryKey: ['resident-options', buildingId ?? null],
-    queryFn: () => fetchResidentOptions(buildingId as string),
-    enabled: enabled && Boolean(buildingId),
   })
 }
 

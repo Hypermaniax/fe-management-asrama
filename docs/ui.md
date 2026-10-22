@@ -172,9 +172,10 @@ Sudah login → redirect `/app`.
 | 9   | Akun Saya          | –                               | parent            | –                                                        |
 | 9.1 | Profil Saya        | `/app/me/profile`               | form              | CALON_PENGHUNI, PENGHUNI, PENGURUS                       |
 | 9.2 | Tagihan Saya       | `/app/me/invoices`              | list              | PENGHUNI                                                 |
-| 9.3 | Dokumen Saya       | `/app/me/documents`             | list/upload       | CALON_PENGHUNI, PENGHUNI                                 |
-| 9.4 | Absensi Saya       | `/app/me/attendance`            | list              | PENGHUNI                                                 |
-| 9.5 | Pemilihan Saya     | `/app/me/elections`             | list/vote         | PENGHUNI                                                 |
+| 9.3 | Pembayaran Saya    | `/app/me/payments`              | list/form         | PENGHUNI                                                 |
+| 9.4 | Dokumen Saya       | `/app/me/documents`             | list/upload       | CALON_PENGHUNI, PENGHUNI                                 |
+| 9.5 | Absensi Saya       | `/app/me/attendance`            | list              | PENGHUNI                                                 |
+| 9.6 | Pemilihan Saya     | `/app/me/elections`             | list/vote         | PENGHUNI                                                 |
 
 ### Detail page (turunan, diluar 46 menu)
 
@@ -182,6 +183,7 @@ Sudah login → redirect `/app`.
 | ----------------------- | ----------------------------------------------------------- |
 | `/app/residents/:id`    | profil penghuni + riwayat kamar/dokumen/tagihan             |
 | `/app/events/:id`       | detail kegiatan: sesi, panitia, absensi, anggaran, lampiran |
+| `/app/elections/:id`    | detail pemilihan: kandidat, role pemilih, hasil, finalisasi |
 | `/app/elections/:id`    | detail pemilihan: kandidat, status, hasil, pengesahan       |
 | `/app/system/roles/:id` | set permission + menu role                                  |
 | `/app/me/elections/:id` | halaman voting (warga)                                      |
@@ -256,6 +258,12 @@ Format: **Tujuan · Data (query) · Komponen · Kolom/Field · Aksi · State kha
 
 ### Keuangan
 
+**Akun Kas `/app/finance/cash`**
+
+- Tabel: nama akun, gedung, tipe (Tunai/Bank), saldo awal, masuk, keluar, saldo berjalan.
+- Aksi: tambah/ubah/hapus akun (satu akun per gedung); hapus gagal bila sudah ada mutasi.
+- Filter: gedung.
+
 **Tagihan `/app/finance/invoices`**
 
 - Kolom: kode, penghuni, periode, total, dibayar, status (ISSUED🟧/PARTIAL🟨/PAID🟩/OVERDUE🟥/VOID⬛).
@@ -264,73 +272,98 @@ Format: **Tujuan · Data (query) · Komponen · Kolom/Field · Aksi · State kha
 
 **Pembayaran `/app/finance/payments`**
 
-- Kolom: kode, penghuni, jumlah, metode (CASH/TRANSFER/QRIS), waktu, akun kas.
-- Form: penghuni, jumlah, metode, akun kas, alokasi ke tagihan (cicil/multi-bulan), `idempotencyKey` (dibuat FE).
-- Aksi: **Catat pembayaran** → toast "Pembayaran tercatat".
+- Tab **Rekap** (default): matriks baris penghuni × kolom Jan–Des.
+  - Sel: `✓` lunas, `◐` sebagian, `⏳` menunggu verifikasi, `!` tunggakan, `—` belum ditagih, `×` batal.
+  - Klik sel → detail tagihan + pembayaran tercatat; tombol **Catat pembayaran** bila masih outstanding.
+  - Filter gedung + tahun; pencarian penghuni; toggle tampilkan semua penghuni; total dibayar & tunggakan per baris.
+- Tab **Transaksi**: tabel kode, penghuni, jumlah, metode (CASH/TRANSFER/QRIS), akun kas, waktu, jumlah alokasi; filter gedung/metode/cari.
+- Form: penghuni, jumlah, metode, akun kas, alokasi otomatis FIFO atau pilih tagihan, referensi, catatan, bukti opsional, `idempotencyKey` (dibuat FE).
+- Aksi: **Catat pembayaran** → toast status API.
+- Tab **Pengajuan** (§16): daftar pengajuan warga (default `PENDING`), pratinjau bukti, verifikasi (akun kas opsional), tolak dengan alasan; badge jumlah pengajuan menunggu di tab.
 
 **Pengeluaran `/app/finance/expenses`**
 
-- Kolom: tanggal, kategori, jumlah, vendor, sumber kas. Form: kas, kategori, jumlah, tanggal, keterangan, bukti.
+- Kolom: tanggal, kategori, jumlah, vendor, sumber kas, keterangan; aksi lihat bukti + detail.
+- Filter: gedung, kategori pengeluaran, pencarian vendor/keterangan/akun.
+- Form: gedung, akun kas, kategori, nominal, tanggal, vendor, keterangan, bukti wajib (PDF/PNG/JPEG ≤10 MB); `idempotencyKey` dibuat FE.
+- Detail: nominal, kategori, akun kas, vendor, keterangan, waktu catat, pratinjau bukti.
 
-**Buku Kas `/app/finance/cash`**
+**Buku Kas `/app/finance/cash` (tab Buku Kas)**
 
-- Tampilan ledger: tanggal, tipe (IN/OUT), sumber, jumlah, saldo berjalan. Filter: akun, rentang tanggal.
+- Ringkasan: saldo awal, total masuk, total keluar, saldo saat ini.
+- Tabel ledger: tanggal, tipe (Masuk/Keluar), keterangan + kategori, jumlah bertanda, saldo berjalan; terbaru di atas.
+- Filter: akun kas, rentang tanggal (dari–sampai), reset tanggal.
+- Aksi: **Catat pemasukan** manual (kategori INCOME, nominal, tanggal, keterangan) dan **Reversal** entri (wajib alasan); entri reversal/sudah dibalik tidak bisa dibalik lagi.
 - Read-only (append-only); koreksi hanya via entri REVERSAL.
 
 **Laporan Keuangan `/app/finance/reports`**
 
-- Tab: Tunggakan · Saldo Kas · Pemasukan vs Pengeluaran · Realisasi Anggaran Kegiatan.
-- Komponen: chart + tabel; tombol **Ekspor**.
+- Filter global: gedung (semua/per gedung).
+- Tab **Tunggakan**: ringkasan total tunggakan & jumlah tagihan, chart tunggakan per gedung, filter periode bulan, tabel tagihan belum lunas, **Ekspor CSV**.
+- Tab **Saldo Kas**: ringkasan total saldo, chart saldo per akun, tabel akun (saldo awal/masuk/keluar/saldo).
+- Tab **Pemasukan vs Pengeluaran**: ringkasan pemasukan/pengeluaran/selisih, filter rentang tanggal, chart per kategori, tabel kategori/arah/total, **Ekspor CSV**.
+- Tab **Anggaran Kegiatan**: pilih kegiatan, ringkasan anggaran/realisasi/sisa/pemakaian, progress over-budget, chart anggaran vs realisasi.
 
 ### Organisasi
 
-**Periode `/app/organization/periods`** — kolom: kode, nama, rentang, SK, aktif. Aksi: CRUD + **Aktifkan** (1 aktif).
-**Jabatan `/app/organization/positions`** — kolom: kode, nama, scope (asrama/gedung), role terkait.
-**Penugasan `/app/organization/assignments`** — kolom: orang, jabatan, periode, gedung. Form: user, position, period, gedung, SK.
+**Periode `/app/organization/periods`** — kolom: kode, nama, rentang, SK, status. Aksi: tambah/ubah + **Aktifkan** (hanya satu aktif).
+**Jabatan `/app/organization/positions`** — kolom: kode, nama, level, scope, role, status. Filter scope/status. Aksi: tambah/ubah + nonaktifkan.
+**Penugasan `/app/organization/assignments`** — tab **Penugasan**: pilih pengguna → tabel jabatan/periode/scope/mulai/selesai/status + aksi akhiri; form pengguna, periode, jabatan, scope, mulai, SK.
+**Struktur** (tab di halaman penugasan) — pilih periode; kartu per jabatan berisi pemegang (nama, scope, mulai/selesai) beserta jumlah jabatan/pemegang.
 
 ### Kegiatan
 
 **Daftar Kegiatan `/app/events`**
 
-- Kolom: judul, kategori (RUTIN/BESAR), scope (ASRAMA/GEDUNG), mulai, status, `ad-hoc`.
-- Aksi: **Buat kegiatan** (mode cepat: judul + mulai → `isAdHoc`), buka detail.
-- PENGHUNI: hanya `isPublic`.
+- Kolom: kegiatan (judul + lokasi), kategori (RUTIN/BESAR, badge `ad-hoc`), scope (ASRAMA/GEDUNG), mulai, status, visibilitas warga (publik/internal).
+- Filter: status, kategori, scope (asrama/per gedung), pencarian judul/deskripsi/lokasi.
+- Aksi: **Buat kegiatan** (mode cepat + lengkap: switch `ad-hoc`/publik, scope, anggaran, perilaku berulang), detail, ubah, hapus.
+- PENGHUNI: hanya `isPublic` (filter sisi server pada `GET /events`).
 
-**Detail `/app/events/:id`** — tab: **Sesi**, **Panitia**, **Absensi**, **Anggaran**, **Lampiran**.
+**Detail `/app/events/:id`** — header: judul + status, deskripsi, badge kategori/ad-hoc/publik/scope/berulang, info mulai/selesai/lokasi/anggaran; aksi ubah status (select), ubah, hapus. Tab: **Sesi**, **Panitia**, **Absensi**, **Anggaran**, **Lampiran**.
 
-- Sesi: tambah `EventSession` (jadwal), untuk kegiatan berulang.
-- Panitia: tambah/lepas anggota + peran.
-- Absensi: per sesi, tandai HADIR🟩/IZIN🟨/TIDAK🟥 per user.
-- Anggaran: catat `Expense` bertaut event; lihat rencana vs realisasi.
-- Lampiran: unggah proposal/notulen/LPJ/foto.
+- Sesi: tambah (jadwal/judul/lokasi/catatan) + **Generate** dari daftar tanggal (satu per baris); tabel jadwal + hapus sesi.
+- Panitia: tambah/lepas anggota + peran; pilihan pengguna dari direktori warga sesuai scope kegiatan.
+- Absensi: pilih sesi, tandai HADIR🟩/IZIN🟨/TIDAK🟥 per peserta (peserta dari directory + riwayat absensi), ringkasan jumlah per status, simpan via PUT.
+- Anggaran: ringkasan anggaran/realisasi/sisa + progress pemakaian; tabel expense bertaut event (bukti bisa dipratinjau); **Catat pengeluaran** via `POST /events/:id/expenses` (gedung mengikuti scope, pilih akun kas/kategori, bukti wajib).
+- Lampiran: unggah (jenis PROPOSAL/NOTULEN/LPJ/FOTO/OTHER + berkas PDF/PNG/JPEG ≤10 MB), pratinjau, hapus.
+- PENGHUNI (tanpa `event.UPDATE`): hanya tab **Sesi** & **Lampiran** (read-only).
 
-**Sesi/Agenda `/app/events/sessions`** · **Panitia `/app/events/committees`** · **Absensi `/app/events/attendance`** (self untuk PENGHUNI) · **Lampiran `/app/events/attachments`**.
+**Kegiatan Saya `/app/me/attendance`** — tab **Absensi** (kegiatan + sesi + jadwal + status + check-in + catatan, dari `GET /events/me/attendance`) dan tab **Kepanitiaan** (kegiatan + peran + jabatan, dari `GET /events/me/committees`).
 
 ### Pemilihan
 
-**Daftar Pemilihan `/app/elections`** — kolom: judul, periode, jadwal, status (DRAFT⬛/SCHEDULED🟧/OPEN🟨/CLOSED🟩/DONE🟩/CANCELLED🟥).
+**Daftar Pemilihan `/app/elections`** — kolom: pemilihan (judul + kode), periode, scope, jadwal (mulai–selesai), status (DRAF⬛/TERJADWAL🟧/DIBUKA🟨/DITUTUP🟩/SELESAI🟩/DIBATALKAN⬛). Filter status + pencarian kode/judul.
 
-- Aksi: **Buat**, **Buka**, **Tutup**, **Sahkan pemenang**.
+- Aksi: **Buat pemilihan** (kode, judul, deskripsi, scope gedung/asrama, periode, jadwal, switch abstain, chip role pemilih — default PENGHUNI), detail, ubah, hapus, **Buka** (DRAFT/SCHEDULED konfirmasi), **Tutup** (OPEN konfirmasi).
+- Batalkan (cancel) ada di halaman detail.
 
-**Kandidat `/app/elections/candidates`** — kolom: no urut, nama, visi/misi. Form: pilih warga aktif, visi, misi.
-**Pemilih `/app/elections/eligible`** — tentukan role pemilih (`ElectionEligibleRole`, default PENGHUNI) + pratinjau jumlah eligible.
-**Hasil `/app/elections/results`** — bar per kandidat (warna palet), %, rank. **Hanya tampil setelah CLOSED**; saat OPEN → 403/kosong dengan pesan.
+**Detail `/app/elections/:id`** — header judul/kode/status + info grid (periode, scope, mulai, selesai, abstain). Tab:
+
+- **Kandidat(n)**: tabel no urut, warga (taut ke detail warga), visi, misi; **Tambah kandidat** dari direktori warga sesuai scope (harus warga aktif ber-occupancy + role PENGHUNI); hapus kandidat.
+- **Role Pemilih**: chip role aktif (toggle) + **Simpan role pemilih** (PUT eligible-roles, default PENGHUNI).
+- **Hasil**: bar per kandidat (rank, jumlah suara, %) + baris abstain; sa Rut CLOSED/DONE; saat OPEN → pesan "Hasil terkunci"; CANCELLED → "Pemilihan dibatalkan".
+- **Finalisasi**: butuh periode + jabatan aktif; pilih jabatan + kandidat pemenang (default peringkat 1) → **Sahkan pemenang** (assignment dibuat, status DONE).
+
+**Hasil Pemilihan `/app/elections/results`** — select pemilihan CLOSED/DONE + panel hasil (sama dengan tab Hasil).
 
 ### Sistem (SUPER_ADMIN)
 
-**Pengguna `/app/system/users`** — kolom: nama, email, status, role, gedung. Aksi: CRUD, assign role + scope gedung.
+**Pengguna `/app/system/users`** — read-only: daftar pengguna digabung dari `GET /residents?buildingId=` semua gedung (dedupe); kolom pengguna (taut detail), gedung, status, role; filter status + pencarian. Aksi **Kelola role** (dialog): daftar penugasan direkonstruksi dari audit `userRole` (badge role + scope + sejak; cabut), form beri role (role aktif + scope gedung/global).
 **Role `/app/system/roles`** — kolom: kode, nama, sistem?. Detail → `/app/system/roles/:id` (set permission + menu).
-**Permission `/app/system/permissions`** — tabel resource × action (read-only).
-**Menu `/app/system/menus`** — tree editor: parent, kode, nama, path, ikon, urutan.
-**Audit Log `/app/system/audit`** — kolom: waktu, aktor, aksi, entitas, ringkasan. Detail sebelum/sesudah.
+**Permission `/app/system/permissions`** — matrix resource × aksi (Buat/Lihat/Ubah/Hapus); sel ✓ memakai kode permission sebagai tooltip; read-only (`GET /rbac/permissions`).
+**Menu `/app/system/menus`** — tree read-only root + child (kode, path dengan tautan saat bukan grup, urutan, status aktif); grup ditandai path `#`.
+**Role detail `/app/system/roles/:id`** — tab Permission (matrix + filter pencarian, checkbox per aksi, simpan `PUT /rbac/roles/:id/permissions`) dan tab Menu (checkbox tree, simpan `PUT /rbac/roles/:id/menus`); tombol simpan hanya muncul saat ada perubahan (overlay override, reset setelah sukses); role sistem tidak dapat diatur dari daftar.
+**Audit Log `/app/system/audit`** — filter entitas, ID entitas, aksi (Buat/Ubah/Hapus), jumlah baris (≤500); kolom waktu, aktor, aksi (badge), entitas + ID, path; dialog detail menampilkan sebelum/sesudah (JSON), path, IP, aktor.
 
 ### Akun Saya
 
 **Profil `/app/me/profile`** — form: nama, telepon, NIK, gender, wali, alamat. Aksi: **Simpan perubahan**.
-**Tagihan Saya `/app/me/invoices`** — kolom: periode, total, dibayar, status, jatuh tempo. Read-only.
+**Tagihan Saya `/app/me/invoices`** — kolom: periode, total, dibayar, status, jatuh tempo. Read-only; aksi **Ajukan pembayaran** menuju `/app/me/payments`.
+**Pembayaran Saya `/app/me/payments`** — tab **Belum dibayar**: tagihan outstanding, sisa, status pengajuan, aksi **Ajukan/Ajukan ulang** (nonaktif saat menunggu verifikasi). Tab **Riwayat pengajuan**: kode, tagihan, nominal, metode, waktu, status, catatan review, pratinjau bukti; filter status. Form: transfer/QRIS, nominal penuh otomatis, bukti wajib (PDF/PNG/JPEG ≤10 MB), referensi + catatan opsional.
 **Dokumen Saya `/app/me/documents`** — daftar dokumen wajib/permintaan; unggah (validasi MIME/ukuran); lihat status.
-**Absensi Saya `/app/me/attendance`** — riwayat kehadiran per kegiatan/sesi.
-**Pemilihan Saya `/app/me/elections`** — daftar pemilihan di mana user eligible.
+**Absensi Saya `/app/me/attendance`** — tab **Absensi** (riwayat kehadiran per kegiatan/sesi) dan tab **Kepanitiaan** (kegiatan yang dipanitiakan, taut ke detail kegiatan).
+**Pemilihan Saya `/app/me/elections`** — kartu pemilihan OPEN: **Beri suara** (dialog fetch detail → kartu kandidat + Pilih; opsi **Abstain** bila `allowAbstain`; suara tidak bisa dibatalkan, vote ganda → 409 dinotifikasi). **Lihat hasil** (dialog hasil jika CLOSED/DONE). Taut ke daftar & hasil pemilihan.
 
 - Detail `/app/me/elections/:id`: kartu kandidat + pilih + **Kirim suara**; opsi **Abstain** bila `allowAbstain`; konfirmasi sebelum kirim (1 warga 1 suara, tidak bisa dibatalkan). Setelah memilih → status "Sudah memilih".
 

@@ -26,22 +26,23 @@ import {
 } from '@/components/ui/sidebar'
 import type { MenuNode } from '@/features/auth/api'
 import { MENU_ICONS } from '@/lib/menu-icons'
+import { activeMenuPath, flattenMenuPaths } from '@/lib/nav'
 import { filterMenu } from '@/lib/rbac'
 import { useAuthStore } from '@/stores/auth'
 
-function isPathActive(pathname: string, path: string): boolean {
-  const to = `/app${path}`
-  return pathname === to || pathname.startsWith(`${to}/`)
-}
-
-function SidebarLink({ item }: { item: MenuNode }) {
-  const { pathname } = useLocation()
+function SidebarLink({
+  item,
+  activePath,
+}: {
+  item: MenuNode
+  activePath: string | null
+}) {
   const Icon = MENU_ICONS[item.code] ?? CircleDot
 
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
-        isActive={isPathActive(pathname, item.path)}
+        isActive={activePath === item.path}
         tooltip={item.name}
         render={<NavLink to={`/app${item.path}`} />}
       >
@@ -52,11 +53,16 @@ function SidebarLink({ item }: { item: MenuNode }) {
   )
 }
 
-function SidebarGroupItem({ item }: { item: MenuNode }) {
-  const { pathname } = useLocation()
+function SidebarGroupItem({
+  item,
+  activePath,
+}: {
+  item: MenuNode
+  activePath: string | null
+}) {
   const Icon = MENU_ICONS[item.code] ?? CircleDot
   const children = item.children ?? []
-  const active = children.some((child) => isPathActive(pathname, child.path))
+  const active = children.some((child) => child.path === activePath)
 
   return (
     <SidebarMenuItem>
@@ -74,7 +80,7 @@ function SidebarGroupItem({ item }: { item: MenuNode }) {
               <SidebarMenuSubItem key={child.id}>
                 <SidebarMenuSubButton
                   render={<NavLink to={`/app${child.path}`} />}
-                  isActive={isPathActive(pathname, child.path)}
+                  isActive={activePath === child.path}
                 >
                   <span>{child.name}</span>
                 </SidebarMenuSubButton>
@@ -90,6 +96,11 @@ function SidebarGroupItem({ item }: { item: MenuNode }) {
 export function AppSidebar({ loading = false }: { loading?: boolean }) {
   const menus = useAuthStore((state) => state.menus)
   const items = useMemo(() => filterMenu(menus), [menus])
+  const { pathname } = useLocation()
+  const activePath = useMemo(
+    () => activeMenuPath(pathname, flattenMenuPaths(items)),
+    [pathname, items],
+  )
 
   return (
     <Sidebar collapsible="icon">
@@ -126,9 +137,17 @@ export function AppSidebar({ loading = false }: { loading?: boolean }) {
                   ))
                 : items.map((item) =>
                     (item.children ?? []).length > 0 ? (
-                      <SidebarGroupItem key={item.id} item={item} />
+                      <SidebarGroupItem
+                        key={item.id}
+                        item={item}
+                        activePath={activePath}
+                      />
                     ) : (
-                      <SidebarLink key={item.id} item={item} />
+                      <SidebarLink
+                        key={item.id}
+                        item={item}
+                        activePath={activePath}
+                      />
                     ),
                   )}
             </SidebarMenu>
